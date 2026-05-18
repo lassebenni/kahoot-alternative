@@ -164,6 +164,7 @@ export default function Home() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Filter quizzes…"
+          aria-label="Filter quizzes by name"
           className="border border-gray-300 rounded px-3 py-1.5 text-sm w-64 focus:outline-none focus:ring-2 focus:ring-blue-300"
         />
         <span className="text-sm text-gray-500">
@@ -173,10 +174,13 @@ export default function Home() {
 
       {groups.map((group) => {
         const isCollapsed = collapsed[group.key]
+        const listId = `quiz-group-${group.key}`
         return (
           <section key={group.key} className="mb-4">
             <button
               onClick={() => toggle(group.key)}
+              aria-expanded={!isCollapsed}
+              aria-controls={listId}
               className="w-full flex items-center gap-2 text-left py-2 px-1 border-b border-gray-200 hover:bg-gray-50"
             >
               <span className="text-gray-500 text-sm w-4">
@@ -189,7 +193,7 @@ export default function Home() {
             </button>
 
             {!isCollapsed && (
-              <ul className="divide-y divide-gray-100">
+              <ul id={listId} className="divide-y divide-gray-100">
                 {group.items.map((qs) => {
                   const p = qs._p
                   const count = qs.questions.length
@@ -225,8 +229,9 @@ export default function Home() {
 
                       <div className="flex gap-1.5 shrink-0">
                         <button
-                          className="text-gray-400 hover:text-red-600 text-sm px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                          className="text-gray-400 hover:text-red-600 text-sm px-2 py-1 invisible group-hover:visible focus:visible focus-visible:visible transition-opacity"
                           onClick={() => deleteQuiz(qs.id, qs.name)}
+                          aria-label={`Delete quiz ${qs.name}`}
                           title="Delete this quiz, including all of its game sessions"
                         >
                           🗑
@@ -258,7 +263,9 @@ export default function Home() {
 
       {groups.length === 0 && (
         <div className="text-gray-500 text-sm py-8 text-center">
-          No quizzes match “{query}”.
+          {query.trim()
+            ? `No quizzes match “${query}”.`
+            : 'No quizzes yet.'}
         </div>
       )}
     </div>
