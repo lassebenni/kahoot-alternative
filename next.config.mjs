@@ -17,7 +17,7 @@ const nextConfig = {
       },
       {
         source: '/host',
-        destination: '/host/qa',
+        destination: '/host/dashboard',
         permanent: false,
       },
       {
