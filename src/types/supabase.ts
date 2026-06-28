@@ -323,6 +323,7 @@ export type Database = {
     Views: {
       game_results: {
         Row: {
+          correct_count: number | null
           game_id: string | null
           nickname: string | null
           participant_id: string | null

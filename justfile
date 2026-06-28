@@ -221,6 +221,26 @@ load-quizzes:
         fi
     done
 
+# Load every curriculum quiz SQL into the HOSTED (production) Supabase backing hyf-live-qa.pages.dev.
+# Requires: supabase link --project-ref heagexbydrlflxxxsidi (one-time setup)
+load-quizzes-prod:
+    #!/usr/bin/env bash
+    set -uo pipefail
+    shopt -s nullglob
+    files=("{{ curriculum_repo }}/Data Track"/Week*/assets/week_*__live_quiz.sql)
+    if [ ${#files[@]} -eq 0 ]; then
+        echo "  (no curriculum quiz files found under {{ curriculum_repo }}/Data Track/Week */assets/)"
+        exit 0
+    fi
+    for f in "${files[@]}"; do
+        if supabase db query --linked -f "$f" >/dev/null 2>&1; then
+            echo "✓ loaded $(basename "$f") → production"
+        else
+            echo "✗ failed  $(basename "$f") — re-run with:"
+            echo "  supabase db query --linked -f \"$f\""
+        fi
+    done
+
 # Watch curriculum quiz files; reload on save (uses fswatch if installed, else 1s polling). Ctrl+C to stop.
 watch-quizzes:
     #!/usr/bin/env bash

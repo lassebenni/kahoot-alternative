@@ -151,7 +151,8 @@ function Results({ participant, gameId }: { participant: Participant; gameId: st
   useEffect(() => {
     const fetchAll = async () => {
       const [resultsRes, answersRes, gameRes] = await Promise.all([
-        supabase.from('game_results').select().eq('game_id', gameId).order('total_score', { ascending: false }),
+        // Same ordering as the host view: correct_count first, total_score tiebreaker.
+        supabase.from('game_results').select().eq('game_id', gameId).order('correct_count', { ascending: false }).order('total_score', { ascending: false }),
         supabase.from('answers').select('question_id, choice_id, score').eq('participant_id', participant.id),
         supabase.from('games').select('quiz_set_id').eq('id', gameId).single(),
       ])

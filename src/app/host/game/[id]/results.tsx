@@ -36,10 +36,13 @@ export default function Results({
 
   useEffect(() => {
     const getResults = async () => {
+      // Rank by correct_count first so a fast 9/10 can't beat a slower 10/10.
+      // total_score is the speed-bonus tiebreaker within the same correct count.
       const { data, error } = await supabase
         .from('game_results')
         .select()
         .eq('game_id', gameId)
+        .order('correct_count', { ascending: false })
         .order('total_score', { ascending: false })
       if (error) return alert(error.message)
       setGameResults(data)
