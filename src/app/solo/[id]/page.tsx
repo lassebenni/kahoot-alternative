@@ -201,14 +201,6 @@ export default function SoloQuiz({ params }: { params: { id: string } }) {
             </span>
             <div className="flex items-center gap-4">
               <span className="text-sm font-bold text-green-400">{score} pts</span>
-              {isAnswerRevealed && (
-                <button
-                  onClick={handleNext}
-                  className="bg-white text-black font-semibold px-5 py-2 rounded-lg text-sm hover:bg-gray-200 active:scale-95 transition"
-                >
-                  {currentIdx === totalQuestions - 1 ? 'Finish' : 'Next'}
-                </button>
-              )}
             </div>
           </div>
 
@@ -372,6 +364,14 @@ export default function SoloQuiz({ params }: { params: { id: string } }) {
                     )
                   })}
                 </div>
+
+                {/* Next / Finish below the answers, not in the header */}
+                <button
+                  onClick={handleNext}
+                  className="mt-8 w-full bg-white text-black font-bold py-4 rounded-xl text-lg hover:bg-gray-200 active:scale-95 transition"
+                >
+                  {currentIdx === totalQuestions - 1 ? 'Finish' : 'Next'}
+                </button>
               </div>
             )}
           </div>
