@@ -94,8 +94,9 @@ export default function PastGames() {
       <h1 className="text-xl font-bold mb-4">Past games</h1>
       <p className="text-sm text-gray-500 mb-4">
         Each row is a game session. Click <strong>Open results</strong> to see its
-        leaderboard and per-question grid. Toggle <em>Show all results</em> on the
-        results page to reveal the full ranking.
+        leaderboard and per-question grid: this works for any game that has started,
+        including one still in progress or stopped mid-quiz. Toggle{' '}
+        <em>Show all results</em> on the results page to reveal the full ranking.
       </p>
       <table className="w-full text-sm border-collapse">
         <thead>
@@ -111,7 +112,10 @@ export default function PastGames() {
         <tbody>
           {games.map((g) => {
             const c = counts.get(g.id) ?? { players: 0, total_pts: 0 }
-            const finished = g.phase === 'result'
+            // Results are available for any game that has left the lobby, so the
+            // host can open the leaderboard for an in-progress or stopped quiz,
+            // not just a finished one.
+            const started = g.phase === 'quiz' || g.phase === 'result'
             return (
               <tr key={g.id} className="border-b last:border-b-0">
                 <td className="py-2 pr-3 font-semibold">{g.quiz_set?.name ?? '(deleted quiz)'}</td>
@@ -144,9 +148,9 @@ export default function PastGames() {
                         🔍 Walk-through
                       </Link>
                     )}
-                    {finished && (
+                    {started && (
                       <Link
-                        href={`/host/game/${g.id}`}
+                        href={`/host/game/${g.id}?view=results`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="px-3 py-1 rounded bg-green-500 text-white hover:bg-green-600 text-xs"

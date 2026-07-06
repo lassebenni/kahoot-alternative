@@ -24,9 +24,17 @@ enum AdminScreens {
 
 export default function Home({
   params: { id: gameId },
+  searchParams,
 }: {
   params: { id: string }
+  searchParams: { view?: string }
 }) {
+  // ?view=results forces the results screen regardless of the live game phase,
+  // so the host can open the leaderboard for a game still in progress (or one
+  // that was stopped mid-quiz) from the past-games list. Read-only: the Results
+  // component never changes the game phase.
+  const forceResults = searchParams?.view === 'results'
+
   const [currentScreen, setCurrentScreen] = useState<AdminScreens>(
     AdminScreens.lobby
   )
@@ -129,10 +137,10 @@ export default function Home({
 
   return (
     <main className="bg-green-600 min-h-screen">
-      {currentScreen == AdminScreens.lobby && (
+      {!forceResults && currentScreen == AdminScreens.lobby && (
         <Lobby participants={participants} gameId={gameId}></Lobby>
       )}
-      {currentScreen == AdminScreens.quiz && quizSet && (
+      {!forceResults && currentScreen == AdminScreens.quiz && quizSet && (
         <Quiz
           question={quizSet.questions[currentQuestionSequence]}
           questionCount={quizSet.questions.length}
@@ -140,7 +148,7 @@ export default function Home({
           participants={participants}
         ></Quiz>
       )}
-      {currentScreen == AdminScreens.result && quizSet && (
+      {(forceResults || currentScreen == AdminScreens.result) && quizSet && (
         <Results
           participants={participants}
           quizSet={quizSet}
