@@ -137,6 +137,14 @@ export default function Quiz({
   return (
     <div className="h-screen flex flex-col items-stretch bg-slate-900 relative">
       <div className="absolute right-4 top-4">
+        {!isAnswerRevealed && hasShownChoices && (
+          <button
+            className="p-2 bg-yellow-400 text-black rounded font-bold hover:bg-yellow-300"
+            onClick={onTimeUp}
+          >
+            Show answer
+          </button>
+        )}
         {isAnswerRevealed && (
           <button
             className="p-2 bg-white text-black rounded hover:bg-gray-200"
