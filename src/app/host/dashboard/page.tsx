@@ -245,6 +245,15 @@ export default function Home() {
                         >
                           Preview
                         </Link>
+                        <Link
+                          href={`/solo/${qs.id}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="bg-purple-100 text-purple-700 py-1 px-3 rounded hover:bg-purple-200 text-sm"
+                          title="Play this quiz self-paced as a single player, no room or players needed"
+                        >
+                          Solo
+                        </Link>
                         <button
                           className="bg-green-600 hover:bg-green-700 text-white py-1 px-4 rounded text-sm font-medium"
                           onClick={() => startGame(qs.id)}
