@@ -2,19 +2,23 @@ import { QUESTION_ANSWER_TIME, TIME_TIL_CHOICE_REVEAL } from '@/constants'
 import { Answer, Participant, Question, supabase } from '@/types/types'
 import { useEffect, useRef, useState } from 'react'
 import { CountdownCircleTimer } from 'react-countdown-circle-timer'
+import { RejoinButton, RejoinPanel } from './rejoin-panel'
 
 export default function Quiz({
   question: question,
   questionCount: questionCount,
   gameId,
   participants,
+  presentIds,
 }: {
   question: Question
   questionCount: number
   gameId: string
   participants: Participant[]
+  presentIds: Set<string>
 }) {
   const [isAnswerRevealed, setIsAnswerRevealed] = useState(false)
+  const [showRejoinPanel, setShowRejoinPanel] = useState(false)
 
   const [hasShownChoices, setHasShownChoices] = useState(false)
 
@@ -136,6 +140,15 @@ export default function Quiz({
 
   return (
     <div className="h-screen flex flex-col items-stretch bg-slate-900 relative">
+      <RejoinButton onClick={() => setShowRejoinPanel(true)} />
+      {showRejoinPanel && (
+        <RejoinPanel
+          gameId={gameId}
+          participants={participants}
+          presentIds={presentIds}
+          onClose={() => setShowRejoinPanel(false)}
+        />
+      )}
       <div className="absolute right-4 top-4">
         {!isAnswerRevealed && (
           <button

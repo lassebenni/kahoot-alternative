@@ -9,6 +9,7 @@ import {
 import { useEffect, useState } from 'react'
 import Confetti from 'react-confetti'
 import useWindowSize from 'react-use/lib/useWindowSize'
+import { RejoinButton, RejoinPanel } from './rejoin-panel'
 
 type AnswerRow = {
   participant_id: string
@@ -20,13 +21,17 @@ type AnswerRow = {
 type ChoiceRow = { id: string; question_id: string; body: string; is_correct: boolean }
 
 export default function Results({
+  participants,
   quizSet,
   gameId,
+  presentIds,
 }: {
   participants: Participant[]
   quizSet: QuizSet
   gameId: string
+  presentIds: Set<string>
 }) {
+  const [showRejoinPanel, setShowRejoinPanel] = useState(false)
   const [gameResults, setGameResults] = useState<GameResult[]>([])
   const [answers, setAnswers] = useState<AnswerRow[]>([])
   const [choicesByQuestion, setChoicesByQuestion] = useState<Map<string, ChoiceRow[]>>(new Map())
@@ -116,6 +121,15 @@ export default function Results({
   return (
     <div className="min-h-screen bg-black">
       <div className="text-center relative">
+        <RejoinButton onClick={() => setShowRejoinPanel(true)} />
+        {showRejoinPanel && (
+          <RejoinPanel
+            gameId={gameId}
+            participants={participants}
+            presentIds={presentIds}
+            onClose={() => setShowRejoinPanel(false)}
+          />
+        )}
         <h1 className="text-3xl my-4 py-4 px-12 bg-white inline-block rounded font-bold">
           {quizSet.name}
         </h1>

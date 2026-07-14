@@ -1,6 +1,42 @@
 import { Participant, supabase } from '@/types/types'
-import { on } from 'events'
-import { FormEvent, useEffect, useState } from 'react'
+import { FormEvent, useState } from 'react'
+
+// Looks up (game_id, user_id) for the current anonymous Supabase session, if
+// any. Used both on first mount (to restore a participant after a page
+// refresh) and whenever a dropped student reopens the join link mid-quiz.
+export async function fetchExistingParticipant(
+  gameId: string
+): Promise<Participant | null> {
+  let userId: string | null = null
+
+  const { data: sessionData } = await supabase.auth.getSession()
+
+  if (sessionData.session) {
+    userId = sessionData.session?.user.id ?? null
+  } else {
+    const { data, error } = await supabase.auth.signInAnonymously()
+    if (error) console.error(error)
+    userId = data?.user?.id ?? null
+  }
+
+  if (!userId) return null
+
+  const { data: participantData, error } = await supabase
+    .from('participants')
+    .select()
+    .eq('game_id', gameId)
+    .eq('user_id', userId)
+    .maybeSingle()
+
+  if (error) {
+    // Don't alert on transient lobby-fetch errors; they crash the UX with
+    // an alert loop. Just log and let the caller retry by interacting.
+    console.error('fetchExistingParticipant:', error)
+    return null
+  }
+
+  return participantData
+}
 
 export default function Lobby({
   gameId,
@@ -9,79 +45,33 @@ export default function Lobby({
   gameId: string
   onRegisterCompleted: (participant: Participant) => void
 }) {
-  const [participant, setParticipant] = useState<Participant | null>(null)
-
-  useEffect(() => {
-    const fetchParticipant = async () => {
-      let userId: string | null = null
-
-      const { data: sessionData, error: sessionError } =
-        await supabase.auth.getSession()
-
-      if (sessionData.session) {
-        userId = sessionData.session?.user.id ?? null
-      } else {
-        const { data, error } = await supabase.auth.signInAnonymously()
-        if (error) console.error(error)
-        userId = data?.user?.id ?? null
-      }
-
-      if (!userId) {
-        return
-      }
-
-      const { data: participantData, error } = await supabase
-        .from('participants')
-        .select()
-        .eq('game_id', gameId)
-        .eq('user_id', userId)
-        .maybeSingle()
-
-      if (error) {
-        // Don't alert on transient lobby-fetch errors; they crash the UX with
-        // an alert loop. Just log and let the user retry by interacting.
-        console.error('fetchParticipant:', error)
-        return
-      }
-
-      if (participantData) {
-        setParticipant(participantData)
-        onRegisterCompleted(participantData)
-      }
-    }
-
-    fetchParticipant()
-  }, [gameId, onRegisterCompleted])
-
   return (
     <div className="bg-green-500 flex justify-center items-center min-h-screen">
       <div className="bg-black p-12">
-        {!participant && (
-          <Register
-            gameId={gameId}
-            onRegisterCompleted={(participant) => {
-              onRegisterCompleted(participant)
-              setParticipant(participant)
-            }}
-          />
-        )}
-
-        {participant && (
-          <div className="text-white max-w-md">
-            <h1 className="text-xl pb-4">Welcome {participant.nickname}！</h1>
-            <p>
-              You have been registered and your nickname should show up on the
-              admin screen. Please sit back and wait until the game master
-              starts the game.
-            </p>
-          </div>
-        )}
+        <Register gameId={gameId} onRegisterCompleted={onRegisterCompleted} />
       </div>
     </div>
   )
 }
 
-function Register({
+export function Waiting({ participant }: { participant: Participant }) {
+  return (
+    <div className="bg-green-500 flex justify-center items-center min-h-screen">
+      <div className="bg-black p-12">
+        <div className="text-white max-w-md">
+          <h1 className="text-xl pb-4">Welcome {participant.nickname}！</h1>
+          <p>
+            You have been registered and your nickname should show up on the
+            admin screen. Please sit back and wait until the game master
+            starts the game.
+          </p>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export function Register({
   onRegisterCompleted,
   gameId,
 }: {

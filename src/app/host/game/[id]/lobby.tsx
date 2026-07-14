@@ -1,6 +1,5 @@
 import { Participant, supabase } from '@/types/types'
-import { useQRCode } from 'next-qrcode'
-import { useEffect, useState } from 'react'
+import JoinQr from './join-qr'
 
 export default function Lobby({
   participants: participants,
@@ -9,14 +8,6 @@ export default function Lobby({
   participants: Participant[]
   gameId: string
 }) {
-  const { Canvas } = useQRCode()
-  // Read window.location.origin only after mount so SSR and the first CSR
-  // render agree on the value (both empty), avoiding a hydration warning.
-  const [playerUrl, setPlayerUrl] = useState<string>('')
-  useEffect(() => {
-    setPlayerUrl(`${window.location.origin}/game/${gameId}`)
-  }, [gameId])
-
   const onClickStartGame = async () => {
     const { data, error } = await supabase
       .from('games')
@@ -50,22 +41,7 @@ export default function Lobby({
           </button>
         </div>
         <div className="pl-4">
-          {playerUrl && (
-            <>
-              <Canvas
-                text={playerUrl}
-                options={{
-                  errorCorrectionLevel: 'M',
-                  margin: 3,
-                  scale: 4,
-                  width: 400,
-                }}
-              />
-              <p className="text-white text-center mt-2 break-all text-sm">
-                {playerUrl}
-              </p>
-            </>
-          )}
+          <JoinQr gameId={gameId} />
         </div>
       </div>
     </div>
