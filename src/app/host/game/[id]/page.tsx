@@ -11,6 +11,7 @@ import {
   QuizSet,
   supabase,
 } from '@/types/types'
+import { ONLINE_THRESHOLD_MS } from '@/constants'
 import { useEffect, useState } from 'react'
 import Lobby from './lobby'
 import Quiz from './quiz'
@@ -42,6 +43,29 @@ export default function Home({
   const [participants, setParticipants] = useState<Participant[]>([])
 
   const [quizSet, setQuizSet] = useState<QuizSet>()
+
+  // Derived from participants[].last_seen (kept fresh by each player's
+  // heartbeat, see HEARTBEAT_INTERVAL_MS) rather than Supabase Presence,
+  // which doesn't work on this project's current supabase-js version (see
+  // the participants_last_seen migration). Recomputed on a tick since
+  // "online" is a function of the current time, not just of new data.
+  const [now, setNow] = useState<number | null>(null)
+  useEffect(() => {
+    setNow(Date.now())
+    const interval = setInterval(() => setNow(Date.now()), 5000)
+    return () => clearInterval(interval)
+  }, [])
+
+  const presentIds = new Set(
+    now === null
+      ? []
+      : participants
+          .filter(
+            (p) =>
+              p.last_seen && now - new Date(p.last_seen).getTime() < ONLINE_THRESHOLD_MS
+          )
+          .map((p) => p.id)
+  )
 
   useEffect(() => {
     const getQuestions = async () => {
@@ -101,6 +125,21 @@ export default function Home({
           {
             event: 'UPDATE',
             schema: 'public',
+            table: 'participants',
+            filter: `game_id=eq.${gameId}`,
+          },
+          (payload) => {
+            const updated = payload.new as Participant
+            setParticipants((currentParticipants) =>
+              currentParticipants.map((p) => (p.id === updated.id ? updated : p))
+            )
+          }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
             table: 'games',
             filter: `id=eq.${gameId}`,
           },
@@ -146,6 +185,7 @@ export default function Home({
           questionCount={quizSet.questions.length}
           gameId={gameId}
           participants={participants}
+          presentIds={presentIds}
         ></Quiz>
       )}
       {(forceResults || currentScreen == AdminScreens.result) && quizSet && (
@@ -153,6 +193,7 @@ export default function Home({
           participants={participants}
           quizSet={quizSet}
           gameId={gameId}
+          presentIds={presentIds}
         ></Results>
       )}
     </main>

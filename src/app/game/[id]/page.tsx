@@ -5,7 +5,8 @@ export const runtime = 'edge'
 import React, { FormEvent, useEffect, useRef, useState } from 'react'
 import { RealtimeChannel } from '@supabase/supabase-js'
 import { Choice, Game, Participant, Question, supabase } from '@/types/types'
-import Lobby from './lobby'
+import { HEARTBEAT_INTERVAL_MS } from '@/constants'
+import Lobby, { Waiting, fetchExistingParticipant } from './lobby'
 import Quiz from './quiz'
 
 enum Screens {
@@ -74,6 +75,44 @@ export default function Home({
     setQuestions(data)
   }
 
+  // Restore a previously-registered participant on mount, independent of
+  // which screen is currently showing. This is what lets a student who
+  // reconnects mid-quiz (or reloads the page) land back on their existing
+  // participant row instead of being stuck with no join UI once the quiz
+  // has moved past the lobby phase.
+  useEffect(() => {
+    let cancelled = false
+    fetchExistingParticipant(gameId).then((existing) => {
+      if (cancelled || !existing) return
+      onRegisterCompleted(existing)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [gameId])
+
+  // Heartbeat so the host's rejoin panel can tell who is currently connected
+  // apart from who has merely joined at some point in the past. Supabase
+  // Realtime Presence would be the natural fit here, but it doesn't work on
+  // this project's current supabase-js version (see the
+  // participants_last_seen migration for why), so this falls back to a
+  // plain timestamp column updated periodically while the player is mounted.
+  useEffect(() => {
+    if (!participant) return
+
+    const beat = () => {
+      supabase
+        .from('participants')
+        .update({ last_seen: new Date().toISOString() })
+        .eq('id', participant.id)
+        .then()
+    }
+
+    beat()
+    const interval = setInterval(beat, HEARTBEAT_INTERVAL_MS)
+    return () => clearInterval(interval)
+  }, [participant?.id])
+
   useEffect(() => {
     const setGameListner = (): RealtimeChannel => {
       return supabase
@@ -113,13 +152,16 @@ export default function Home({
 
   return (
     <main className="bg-green-500 min-h-screen">
-      {currentScreen == Screens.lobby && (
-        <Lobby
-          onRegisterCompleted={onRegisterCompleted}
-          gameId={gameId}
-        ></Lobby>
+      {/* No participant yet: always show the join form, even mid-quiz, so a
+          dropped student (or a brand-new device scanning the host's QR) can
+          join at any point, not just before the host clicks Start Game. */}
+      {!participant && (
+        <Lobby onRegisterCompleted={onRegisterCompleted} gameId={gameId}></Lobby>
       )}
-      {currentScreen == Screens.quiz && questions && (
+      {participant && currentScreen == Screens.lobby && (
+        <Waiting participant={participant}></Waiting>
+      )}
+      {participant && currentScreen == Screens.quiz && questions && (
         <Quiz
           question={questions![currentQuestionSequence]}
           questionCount={questions!.length}
@@ -128,7 +170,7 @@ export default function Home({
           questionStartedAt={questionStartedAt}
         ></Quiz>
       )}
-      {currentScreen == Screens.results && (
+      {participant && currentScreen == Screens.results && (
         <Results participant={participant!} gameId={gameId}></Results>
       )}
     </main>
