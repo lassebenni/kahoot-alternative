@@ -14,6 +14,15 @@ type Question = {
 
 type Upvote = { qa_question_id: string; user_id: string }
 
+const formatTimestamp = (iso: string) =>
+  new Date(iso).toLocaleString(undefined, {
+    month: 'short',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  })
+
 export default function HostQA() {
   const [showAnswered, setShowAnswered] = useState(false)
   const [questions, setQuestions] = useState<Question[]>([])
@@ -61,11 +70,9 @@ export default function HostQA() {
     return questions
       .filter((q) => showAnswered || !q.answered_at)
       .map((q) => ({ ...q, upvotes: counts.get(q.id) ?? 0 }))
-      .sort((a, b) => {
-        if (!!a.answered_at !== !!b.answered_at) return a.answered_at ? 1 : -1
-        if (b.upvotes !== a.upvotes) return b.upvotes - a.upvotes
-        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-      })
+      .sort(
+        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      )
   }, [questions, upvotes, showAnswered])
 
   const open = ranked.filter((q) => !q.answered_at).length
@@ -131,9 +138,13 @@ export default function HostQA() {
               <div className="flex-1 min-w-0">
                 <p className="text-white whitespace-pre-wrap break-words">{q.body}</p>
                 <p className="text-xs text-slate-400 mt-2">
-                  {q.author_nickname} · {new Date(q.created_at).toLocaleTimeString()}
+                  {q.author_nickname}
+                  <span className="mx-1">·</span>
+                  asked {formatTimestamp(q.created_at)}
                   {q.answered_at && (
-                    <span className="ml-2 text-green-400">✓ answered</span>
+                    <span className="ml-2 text-green-400">
+                      ✓ answered {formatTimestamp(q.answered_at)}
+                    </span>
                   )}
                 </p>
               </div>
