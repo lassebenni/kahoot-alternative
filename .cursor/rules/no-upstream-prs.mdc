@@ -1,0 +1,39 @@
+---
+description: Never open PRs against the upstream parent fork
+alwaysApply: true
+---
+
+# fork-only pull requests
+
+this repo is a fork. never open pull requests against the parent/upstream repository.
+
+## repositories
+
+| role | owner/repo |
+|---|---|
+| **fork (yours)** | `lassebenni/kahoot-alternative` |
+| **parent (never PR here)** | `supabase-community/kahoot-alternative` |
+
+## git remotes
+
+- `origin` → `lassebenni/kahoot-alternative` (push branches and open PRs here)
+- `upstream` → `supabase-community/kahoot-alternative` (read-only reference; do not PR)
+
+## required behavior
+
+- always create PRs with: `gh pr create --repo lassebenni/kahoot-alternative`
+- before `gh pr create`, verify the base repo is the fork, not `supabase-community/*`
+- never run `gh pr create` without `--repo` unless `gh repo set-default` is confirmed as `lassebenni/kahoot-alternative`
+- never push feature branches to `upstream`
+- production deploys come from merging to `main` on the fork (GitHub Actions → Cloudflare Pages)
+
+## example
+
+```bash
+# ✅ correct
+gh pr create --repo lassebenni/kahoot-alternative --base main --head feat/my-branch
+
+# ❌ wrong — targets parent fork
+gh pr create --repo supabase-community/kahoot-alternative
+gh pr create   # when default repo is upstream
+```
