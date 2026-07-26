@@ -19,6 +19,15 @@ type Upvote = {
 
 const NICK_KEY = 'hyf_qa_nickname'
 
+const formatTimestamp = (iso: string) =>
+  new Date(iso).toLocaleString(undefined, {
+    month: 'short',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  })
+
 export default function QAPage() {
   const [userId, setUserId] = useState<string | null>(null)
   const [nickname, setNickname] = useState<string>('')
@@ -90,10 +99,9 @@ export default function QAPage() {
     const myVotes = new Set(upvotes.filter((u) => u.user_id === userId).map((u) => u.qa_question_id))
     return questions
       .map((q) => ({ ...q, upvotes: counts.get(q.id) ?? 0, votedByMe: myVotes.has(q.id) }))
-      .sort((a, b) => {
-        if (b.upvotes !== a.upvotes) return b.upvotes - a.upvotes
-        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-      })
+      .sort(
+        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      )
   }, [questions, upvotes, userId])
 
   const saveNickname = (e: FormEvent) => {
@@ -232,8 +240,8 @@ export default function QAPage() {
                   <p className="text-xs text-slate-400 mt-2">
                     {q.author_nickname}
                     {isMine && <span className="text-green-400 ml-1">(you)</span>}
-                    {' · '}
-                    {new Date(q.created_at).toLocaleTimeString()}
+                    <span className="mx-1">·</span>
+                    asked {formatTimestamp(q.created_at)}
                   </p>
                   {isMine && (
                     <div className="flex gap-2 mt-2">
