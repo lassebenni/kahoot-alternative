@@ -221,22 +221,50 @@ load-quizzes:
         fi
     done
 
-# Load every curriculum quiz SQL into the HOSTED (production) Supabase backing hyf-live-qa.pages.dev.
+# Load ONE week's curriculum quiz SQL into the HOSTED (production) Supabase backing hyf-live-qa.pages.dev.
 # Requires: supabase link --project-ref heagexbydrlflxxxsidi (one-time setup)
-load-quizzes-prod:
+#
+# Takes a week number on purpose. This used to glob every week and reseed them all,
+# which is destructive: a seed deletes its questions before re-adding them, and
+# answers cascade off questions. Re-running it over an already-played week wipes
+# that game's answers and results. Pass `all` to sweep every week; sets that
+# already have games attached are skipped rather than reseeded.
+load-quizzes-prod week:
     #!/usr/bin/env bash
     set -uo pipefail
     shopt -s nullglob
-    files=("{{ curriculum_repo }}/Data Track"/Week*/assets/week_*__live_quiz.sql)
+    if [ "{{ week }}" = "all" ]; then
+        files=("{{ curriculum_repo }}/Data Track"/Week*/assets/week_*__live_quiz.sql)
+    else
+        files=("{{ curriculum_repo }}/Data Track/Week {{ week }}/assets/week_{{ week }}__live_quiz.sql")
+    fi
     if [ ${#files[@]} -eq 0 ]; then
-        echo "  (no curriculum quiz files found under {{ curriculum_repo }}/Data Track/Week */assets/)"
-        exit 0
+        echo "  (no quiz file for week '{{ week }}' under {{ curriculum_repo }}/Data Track/)"
+        exit 1
     fi
     for f in "${files[@]}"; do
+        base=$(basename "$f")
+        if [ ! -f "$f" ]; then
+            echo "✗ no quiz file at $f"
+            exit 1
+        fi
+        # Every seed declares its quiz_set ids as literal uuids. If any of them
+        # already has a game, reseeding would cascade that game's answers away.
+        ids=$(grep -ohE "'[0-9a-f-]{36}'::uuid" "$f" | tr -d "'" | sed 's/::uuid//' | sort -u | paste -sd, - | sed "s/[^,]*/'&'/g")
+        if [ -n "$ids" ]; then
+            printf "SELECT count(*) AS played FROM games WHERE quiz_set_id IN (%s);\n" "$ids" > /tmp/hyf_quiz_guard.sql
+            played=$(supabase db query --linked -f /tmp/hyf_quiz_guard.sql 2>/dev/null | grep -oE '"played": *[0-9]+' | grep -oE '[0-9]+$')
+            if [ -n "${played:-}" ] && [ "$played" -gt 0 ]; then
+                echo "⏭ SKIPPED $base — its quiz set(s) already have $played game(s)."
+                echo "   Reseeding would delete those questions and cascade away their answers."
+                echo "   For a content edit, run a targeted UPDATE on the question body instead."
+                continue
+            fi
+        fi
         if supabase db query --linked -f "$f" >/dev/null 2>&1; then
-            echo "✓ loaded $(basename "$f") → production"
+            echo "✓ loaded $base → production"
         else
-            echo "✗ failed  $(basename "$f") — re-run with:"
+            echo "✗ failed  $base — re-run with:"
             echo "  supabase db query --linked -f \"$f\""
         fi
     done
